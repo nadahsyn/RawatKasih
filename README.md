@@ -10,33 +10,24 @@ Aplikasi ini hadir sebagai solusi monitoring kesehatan jarak jauh dengan fitur p
 
 ## Caregiver Mode
 
-| Fitur | Deskripsi |
-|---|---|
-| Kelola Data Pasien | Menambahkan dan mengatur data pasien lansia |
-| Reminder Obat | Mengatur jadwal dan pengingat minum obat pasien |
-| Monitoring Obat | Memantau status minum obat pasien |
-| Monitoring Harian | Melihat kondisi kesehatan harian pasien |
-| Riwayat Kesehatan | Melihat histori aktivitas dan kondisi kesehatan pasien |
-
----
+- Kelola data pasien
+- Pengaturan jadwal dan reminder obat
+- Monitoring status minum obat
+- Monitoring kondisi harian pasien
+- Riwayat aktivitas kesehatan pasien
 
 ## Patient Mode
 
-| Fitur | Deskripsi |
-|---|---|
-| Reminder Minum Obat | Menampilkan jadwal minum obat harian |
-| Konfirmasi Obat | Pasien dapat mengonfirmasi bahwa obat sudah diminum |
-| Input Kondisi Harian | Mengisi kondisi kesehatan sederhana setiap hari |
-| Jadwal Harian | Menampilkan aktivitas dan jadwal pasien |
-
----
+- Reminder minum obat
+- Konfirmasi “sudah minum obat”
+- Input kondisi harian sederhana
+- Tampilan jadwal harian pasien
 
 ## Fitur Umum
 
-| Fitur | Deskripsi |
-|---|---|
-| Login & Register | Sistem autentikasi pengguna |
-| Sinkronisasi Data | Data monitoring pasien tersimpan dan terhubung |
+- Login & Register
+- Pergantian role caregiver/pasien
+- Sinkronisasi data monitoring pasien
 
 ---
 
