@@ -16,7 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.projekakhir.rawatkasih.model.patient
+import com.projekakhir.rawatkasih.model.Patient
+
 
 @Composable
 fun PatientCard(patient: Patient) {
@@ -29,9 +30,11 @@ fun PatientCard(patient: Patient) {
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp)
     ) {
         Column(
+            modifier = Modifier.padding(16.dp)
         ) {
 
             Row(
