@@ -89,7 +89,7 @@ class LoginActivity : AppCompatActivity() {
         // Dummy login — nanti diganti API call
         btnLogin.postDelayed({
             setLoadingState(false)
-            if (email == "test@rawatkasih.com" && password == "123456") {
+            if (email == "caregiver@rawatkasih.com" && password == "123456") {
                 onLoginSuccess()
             } else {
                 onLoginFailed()
@@ -104,10 +104,15 @@ class LoginActivity : AppCompatActivity() {
 
     private fun onLoginSuccess() {
         Toast.makeText(this, "Login berhasil! Selamat datang 👋", Toast.LENGTH_SHORT).show()
-        // TODO: navigasi ke MainActivity
-        // val intent = Intent(this, MainActivity::class.java)
-        // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        // startActivity(intent)
+        val intent = Intent(this, MainActivity::class.java)
+
+        intent.flags =
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        startActivity(intent)
+
+        finish()
     }
 
     private fun onLoginFailed() {
