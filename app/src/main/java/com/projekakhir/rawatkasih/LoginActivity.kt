@@ -90,8 +90,26 @@ class LoginActivity : AppCompatActivity() {
         btnLogin.postDelayed({
             setLoadingState(false)
             if (email == "caregiver@rawatkasih.com" && password == "123456") {
+
                 onLoginSuccess()
+
+            } else if (
+                email == "patient@rawatkasih.com" &&
+                password == "123456"
+            ) {
+
+                val intent = Intent(this, PatientActivity::class.java)
+
+                intent.flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                startActivity(intent)
+
+                finish()
+
             } else {
+
                 onLoginFailed()
             }
         }, 1000)
