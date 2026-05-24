@@ -7,7 +7,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 class RegisterActivity : AppCompatActivity() {
 
     private lateinit var btnBack: android.widget.ImageButton
@@ -30,6 +33,15 @@ class RegisterActivity : AppCompatActivity() {
 
         initViews()
         setupClickListeners()
+
+        CoroutineScope(Dispatchers.IO).launch {
+
+            val result = SupabaseClient.client
+                .from("users")
+                .select()
+
+            println(result)
+        }
     }
 
     private fun initViews() {

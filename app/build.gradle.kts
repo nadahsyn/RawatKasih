@@ -40,7 +40,7 @@ android {
 }
 
 dependencies {
-    
+
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.4")
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.4")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.4")
