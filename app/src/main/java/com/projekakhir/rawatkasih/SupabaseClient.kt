@@ -1,14 +1,21 @@
 package com.projekakhir.rawatkasih
 
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 
 object SupabaseClient {
 
+    init {
+        println("SUPABASE URL = https://qocorphglexryurkzfcn.supabase.co")
+    }
     val client = createSupabaseClient(
-        supabaseUrl = "https://yrnvshekvmkjehfeoocc.supabase.co/rest/v1/",
-        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybnZzaGVrdm1ramVoZmVvb2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MTM5OTIsImV4cCI6MjA5NTE4OTk5Mn0.aeDq7LxQfwLzV9AS5QqUvXpSDdQuf2UBRMldbccs7pM"
+        supabaseUrl = "https://qocorphglexryurkzfcn.supabase.co",
+        supabaseKey = "sb_publishable_zdZIfb_qqYQFzUeshR_jBA_vHRIgIac"
     ) {
+        install(Auth)
         install(Postgrest)
+        install(Realtime)
     }
 }

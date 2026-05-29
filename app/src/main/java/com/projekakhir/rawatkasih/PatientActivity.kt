@@ -3,7 +3,8 @@ package com.projekakhir.rawatkasih
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.projekakhir.rawatkasih.screens.PatientHomeScreen
+import androidx.compose.material3.Text
+import com.projekakhir.rawatkasih.ui.theme.RawatKasihTheme
 
 class PatientActivity : ComponentActivity() {
 
@@ -11,7 +12,9 @@ class PatientActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            PatientHomeScreen()
+            RawatKasihTheme {
+                Text("Silakan login untuk membuka dashboard pasien.")
+            }
         }
     }
 }

@@ -1,480 +1,697 @@
 package com.projekakhir.rawatkasih.screens
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
-import com.projekakhir.rawatkasih.R
-import androidx.compose.material3.CardDefaults
-import com.projekakhir.rawatkasih.ui.theme.CardMint
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import com.projekakhir.rawatkasih.ui.theme.PrimaryMint
-import com.projekakhir.rawatkasih.ui.theme.Surface
-import com.projekakhir.rawatkasih.ui.theme.TextSecondary
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.projekakhir.rawatkasih.R
+import com.projekakhir.rawatkasih.data.AuthResult
+import com.projekakhir.rawatkasih.data.MedicineLog
+import com.projekakhir.rawatkasih.data.MedicineSchedule
+import com.projekakhir.rawatkasih.data.RawatKasihRepository
+import com.projekakhir.rawatkasih.ui.theme.CardMint
+import com.projekakhir.rawatkasih.ui.theme.InputBorder
+import com.projekakhir.rawatkasih.ui.theme.PrimaryMint
+import com.projekakhir.rawatkasih.ui.theme.Surface
 import com.projekakhir.rawatkasih.ui.theme.TextPrimary
-import androidx.compose.foundation.lazy.LazyColumn
+import com.projekakhir.rawatkasih.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+
 @Composable
-fun PatientHomeScreen() {
-    var kondisi by remember { mutableStateOf("Baik") }
-    var mood by remember { mutableStateOf("Senang") }
-    var obatPagi by remember { mutableStateOf(true) }
-    var cekTensi by remember { mutableStateOf(false) }
-    var jalanSantai by remember { mutableStateOf(false) }
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 56.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+fun PatientHomeScreen(
+    initialSession: AuthResult,
+    onEditProfile: () -> Unit,
+    successMessage: String?,
+    onMessageShown: () -> Unit
+) {
+    val snackbarHostState = remember {
+        SnackbarHostState()
+    }
+    val user = initialSession.user
+    var schedules by remember { mutableStateOf(initialSession.schedules) }
+    var logs by remember { mutableStateOf(initialSession.logs) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var kondisi by remember { mutableStateOf(initialSession.condition?.condition ?: "") }
+    var mood by remember { mutableStateOf(initialSession.condition?.mood ?: "") }
+    var bloodPressure by remember { mutableStateOf(initialSession.condition?.bloodPressure ?: "") }
+    var isSavingCondition by remember { mutableStateOf(false) }
+    var conditionSaved by remember {
+        mutableStateOf(initialSession.condition != null)
+    }
+    var message by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = CardMint
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ava),
-                        contentDescription = "Foto Profil",
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                    )
-                    Spacer(modifier = Modifier.size(16.dp))
-                    Column {
-                        Text(
-                            text = "Siti Muzdalifah (Oma Siti)",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "71 Tahun",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Perempuan",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+    LaunchedEffect(successMessage) {
+
+        if (successMessage != null) {
+
+            snackbarHostState.showSnackbar(
+                successMessage
+            )
+
+            onMessageShown()
         }
+    }
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 56.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardMint)
+                ) {
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Surface
-                )
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.Top
+                    Column(
+                        modifier = Modifier.padding(20.dp)
                     ) {
-                        Card(
-                            shape = CircleShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = CardMint
-                            )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Medication,
-                                contentDescription = "Obat",
-                                tint = PrimaryMint,
+
+                            Image(
+                                painter = painterResource(id = R.drawable.ava),
+                                contentDescription = "Foto Profil",
                                 modifier = Modifier
-                                    .padding(12.dp)
-                                    .padding(top = 2.dp)
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .border(
+                                        width = 3.dp,
+                                        color = Surface,
+                                        shape = CircleShape
+                                    )
                             )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Reminder Obat",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Top
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
+
                                 Text(
-                                    text = "08.00 WIB",
+                                    text = user.name,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.height(7.dp))
+
+                                Text(
+                                    text = user.age?.let { "$it Tahun" }
+                                        ?: "Profil belum lengkap",
                                     fontSize = 14.sp,
                                     color = TextSecondary
                                 )
-                                Column(
-                                    horizontalAlignment = Alignment.End
-                                ) {
+
+                                Spacer(modifier = Modifier.height(5.dp))
+
+                                Text(
+                                    text = user.gender
+                                        ?: "Lengkapi data diri Anda",
+                                    fontSize = 14.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            OutlinedButton(
+                                onClick = onEditProfile,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    2.dp,
+                                    PrimaryMint
+                                )
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = PrimaryMint,
+                                    modifier = Modifier.size(18.dp)
+                                )
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                Text(
+                                    text = "Edit Profil",
+                                    color = PrimaryMint,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    2.dp,
+                                    PrimaryMint
+                                )
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = PrimaryMint,
+                                    modifier = Modifier.size(18.dp)
+                                )
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                Text(
+                                    text = "Kesehatan",
+                                    color = PrimaryMint,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                ReminderCard(
+                    schedules = schedules,
+                    logs = logs,
+                    isSubmitting = isSubmitting,
+                    onTaken = { schedule ->
+
+                        if (isSubmitting) return@ReminderCard
+
+                        scope.launch {
+                            try {
+
+                                isSubmitting = true
+
+                                RawatKasihRepository.markMedicineTaken(schedule)
+
+                                logs = RawatKasihRepository.loadPatientMedicineLogs(user.id)
+
+                                android.util.Log.d(
+                                    "REMINDER",
+                                    "Jumlah log = ${logs.size}"
+                                )
+
+                                message = "Status obat tersimpan."
+
+                            } catch (e: Exception) {
+
+                                message = "Status obat belum bisa disimpan."
+
+                            } finally {
+
+                                isSubmitting = false
+
+                            }
+                        }
+                    }
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Card(
+                                shape = CircleShape,
+                                colors = CardDefaults.cardColors(containerColor = CardMint)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = "Kondisi",
+                                    tint = PrimaryMint,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Kondisi Hari Ini",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = "Bagaimana kondisi tubuh hari ini?",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ChoiceRow(
+                            options = listOf("Baik", "Pusing", "Lemas"),
+                            selected = kondisi,
+                            onSelected = { kondisi = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "Bagaimana mood hari ini?",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ChoiceRow(
+                            options = listOf("Senang", "Biasa", "Sedih"),
+                            selected = mood,
+                            onSelected = { mood = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        OutlinedTextField(
+                            value = bloodPressure,
+                            onValueChange = { bloodPressure = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Tekanan darah") },
+                            placeholder = { Text("Contoh: 120/80") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = PrimaryMint,
+                                unfocusedBorderColor = InputBorder,
+                                focusedLabelColor = PrimaryMint
+                            ),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val conditionInteraction = remember { MutableInteractionSource() }
+
+                        val conditionPressed by conditionInteraction.collectIsPressedAsState()
+
+                        val conditionScale by animateFloatAsState(
+                            targetValue = if (conditionPressed) 0.96f else 1f,
+                            label = "conditionButtonScale"
+                        )
+                        Button(
+                            onClick = {
+                                val patientId = user.id ?: return@Button
+                                isSavingCondition = true
+                                scope.launch {
+                                    try {
+                                        RawatKasihRepository.saveDailyCondition(
+                                            patientId = patientId,
+                                            condition = kondisi,
+                                            mood = mood,
+                                            bloodPressure = bloodPressure
+                                        )
+
+                                        conditionSaved = true
+
+                                        message = "Kondisi hari ini berhasil disimpan"
+                                    } catch (e: Exception) {
+                                        message = "Kondisi belum bisa disimpan."
+                                    } finally {
+                                        isSavingCondition = false
+                                    }
+                                }
+                            },
+                            interactionSource = conditionInteraction,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .graphicsLayer {
+                                    scaleX = conditionScale
+                                    scaleY = conditionScale
+                                },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryMint),
+                            shape = RoundedCornerShape(16.dp),
+                            enabled =
+                                !isSavingCondition &&
+                                        user.id != null &&
+                                        kondisi.isNotBlank() &&
+                                        mood.isNotBlank()
+                        ) {
+                            when {
+
+                                isSavingCondition -> {
+                                    CircularProgressIndicator(
+                                        color = Surface,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                conditionSaved -> {
+
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null
+                                    )
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
                                     Text(
-                                        text = "Amlodipine 5mg",
-                                        fontSize = 15.sp,
+                                        text = "Kondisi Tersimpan",
+                                        fontSize = 16.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+
+                                else -> {
                                     Text(
-                                        text = "1 tablet",
-                                        fontSize = 13.sp,
-                                        color = TextSecondary
+                                        "Simpan Kondisi",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "❝",
-                            fontSize = 18.sp,
-                            color = PrimaryMint
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Jangan lupa minum obat ya",
-                            fontSize = 13.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = TextSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(17.dp))
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryMint
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
+                }
+            }
 
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Sudah Minum"
-                        )
+            item {
+                ScheduleList(schedules = schedules, logs = logs)
+            }
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = "Sudah Minum",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+            if (message.isNotEmpty()) {
+                item {
+                    Text(text = message, color = TextSecondary, fontSize = 13.sp)
                 }
             }
         }
+    }
+}
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
+@Composable
+private fun ReminderCard(
+    schedules: List<MedicineSchedule>,
+    logs: List<MedicineLog>,
+    isSubmitting: Boolean,
+    onTaken: (MedicineSchedule) -> Unit
+) {
+    val nextSchedule = schedules.firstOrNull { schedule ->
+        logs.none { it.scheduleId == schedule.id }
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        label = "buttonScale"
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Card(
+                    shape = CircleShape,
+                    colors = CardDefaults.cardColors(containerColor = CardMint)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Card(
-                            shape = CircleShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = CardMint
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = "Kondisi",
-                                tint = PrimaryMint,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Kondisi Hari Ini",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = "Bagaimana kondisi tubuh hari ini?",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
+                    Icon(
+                        imageVector = Icons.Default.Medication,
+                        contentDescription = "Obat",
+                        tint = PrimaryMint,
+                        modifier = Modifier.padding(12.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        listOf("Baik", "Pusing", "Lemas").forEach { item ->
-                            Button(
-                                onClick = {
-                                    kondisi = item
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(35.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor =
-                                        if (kondisi == item) PrimaryMint
-                                        else CardMint
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Text(
-                                    text = item,
-                                    color = if (kondisi == item)
-                                        Surface
-                                    else TextPrimary
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = "Bagaimana mood hari ini?",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        listOf("Senang", "Biasa", "Sedih").forEach { item ->
-                            Button(
-                                onClick = {
-                                    mood = item
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(35.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor =
-                                        if (mood == item) PrimaryMint
-                                        else CardMint
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Text(
-                                    text = item,
-                                    color = if (mood == item)
-                                        Surface
-                                    else TextPrimary
-                                )
-                            }
-                        }
-                    }
                 }
-            }
-        }
-
-        item {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Card(
-                        shape = CircleShape,
-                        colors = CardDefaults.cardColors(
-                            containerColor = CardMint
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Jadwal",
-                            tint = PrimaryMint,
-                            modifier = Modifier.padding(12.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Jadwal Kesehatan",
+                        text = "Reminder Obat",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (nextSchedule == null) {
                         Text(
-                            text = "08.00 WIB",
-                            fontSize = 13.sp,
+                            text = "Belum ada jadwal obat.",
+                            fontSize = 14.sp,
                             color = TextSecondary
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Minum obat pagi",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = {
-                            obatPagi = !obatPagi
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = nextSchedule.scheduleTime,
+                                fontSize = 14.sp,
+                                color = TextSecondary
+                            )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = nextSchedule.medicineName,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = nextSchedule.dosage ?: "-",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary
+                                )
+                            }
                         }
-                    ) {
-                        Icon(
-                            imageVector =
-                                if (obatPagi)
-                                    Icons.Default.CheckCircle
-                                else
-                                    Icons.Default.RadioButtonUnchecked,
-                            contentDescription = "Checklist",
-                            tint =
-                                if (obatPagi)
-                                    PrimaryMint
-                                else
-                                    TextSecondary
-                        )
-                    }
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "13.00 WIB",
-                            fontSize = 13.sp,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Cek tekanan darah",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = {
-                            cekTensi = !cekTensi
-                        }
-                    ) {
-                        Icon(
-                            imageVector =
-                                if (cekTensi)
-                                    Icons.Default.CheckCircle
-                                else
-                                    Icons.Default.RadioButtonUnchecked,
-                            contentDescription = "Checklist",
-                            tint =
-                                if (cekTensi)
-                                    PrimaryMint
-                                else
-                                    TextSecondary
-                        )
-                    }
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "17.00 WIB",
-                            fontSize = 13.sp,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Jalan santai",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = {
-                            jalanSantai = !jalanSantai
-                        }
-                    ) {
-                        Icon(
-                            imageVector =
-                                if (jalanSantai)
-                                    Icons.Default.CheckCircle
-                                else
-                                    Icons.Default.RadioButtonUnchecked,
-                            contentDescription = "Checklist",
-                            tint =
-                                if (jalanSantai)
-                                    PrimaryMint
-                                else
-                                    TextSecondary
-                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(5.dp))
+            Button(
+                onClick = { nextSchedule?.let(onTaken) },
+
+                interactionSource = interactionSource,
+
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryMint,
+                    disabledContainerColor = InputBorder
+                ),
+                shape = RoundedCornerShape(16.dp),
+                enabled = nextSchedule != null && !isSubmitting
+            ) {
+                if (isSubmitting) {
+
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Surface
+                    )
+
+                } else {
+
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Sudah Minum"
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Sudah Minum",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChoiceRow(
+    options: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        options.forEach { item ->
+            Button(
+                onClick = { onSelected(item) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(38.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selected == item) PrimaryMint else CardMint
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = item,
+                    color = if (selected == item) Surface else TextPrimary,
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScheduleList(
+    schedules: List<MedicineSchedule>,
+    logs: List<MedicineLog>
+) {
+    Column(modifier = Modifier.padding(20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Card(
+                shape = CircleShape,
+                colors = CardDefaults.cardColors(containerColor = CardMint)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "Jadwal",
+                    tint = PrimaryMint,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Jadwal Kesehatan",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        if (schedules.isEmpty()) {
+            Text(
+                text = "Belum ada jadwal hari ini.",
+                color = TextSecondary,
+                fontSize = 14.sp
+            )
+        } else {
+            schedules.forEachIndexed { index, schedule ->
+                ScheduleRow(
+                    schedule = schedule,
+                    isDone = logs.any { it.scheduleId == schedule.id }
+                )
+                if (index < schedules.lastIndex) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScheduleRow(schedule: MedicineSchedule, isDone: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = schedule.scheduleTime,
+                fontSize = 13.sp,
+                color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${schedule.medicineName} ${schedule.dosage ?: ""}".trim(),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        IconButton(onClick = {}) {
+            Icon(
+                imageVector = if (isDone) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                contentDescription = "Status checklist",
+                tint = if (isDone) PrimaryMint else TextSecondary
+            )
         }
     }
 }

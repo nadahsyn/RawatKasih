@@ -18,21 +18,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.projekakhir.rawatkasih.data.CaregiverOption
+import com.projekakhir.rawatkasih.data.RawatKasihRepository
 import com.projekakhir.rawatkasih.ui.theme.*
-import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class CaregiverUser(
-    val id: Long,
-    val name: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onRegisterSuccess: () -> Unit = onNavigateBack
 ) {
     var nama by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -43,8 +38,8 @@ fun RegisterScreen(
     var konfirmPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    var caregiverList by remember { mutableStateOf<List<CaregiverUser>>(emptyList()) }
-    var selectedCaregiver by remember { mutableStateOf<CaregiverUser?>(null) }
+    var caregiverList by remember { mutableStateOf<List<CaregiverOption>>(emptyList()) }
+    var selectedCaregiver by remember { mutableStateOf<CaregiverOption?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var isLoadingCaregivers by remember { mutableStateOf(true) }
 
@@ -59,22 +54,28 @@ fun RegisterScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            try {
-                val result = SupabaseClient.client
-                    .from("users")
-                    .select {
-                        filter {
-                            eq("role", "caregiver")
-                        }
-                    }
-                    .decodeList<CaregiverUser>()
-                caregiverList = result
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isLoadingCaregivers = false
-            }
+
+        android.util.Log.d(
+            "RAWATKASIH",
+            "MULAI LOAD"
+        )
+
+        try {
+            caregiverList = RawatKasihRepository.loadCaregivers()
+
+            android.util.Log.d(
+                "RAWATKASIH",
+                "JUMLAH CAREGIVER = ${caregiverList.size}"
+            )
+
+        } catch (e: Exception) {
+            android.util.Log.e(
+                "RAWATKASIH",
+                "ERROR = ${e.message}",
+                e
+            )
+        } finally {
+            isLoadingCaregivers = false
         }
     }
 
@@ -107,21 +108,19 @@ fun RegisterScreen(
             isLoading = true
             scope.launch {
                 try {
-                    SupabaseClient.client
-                        .from("users")
-                        .insert(mapOf(
-                            "name" to nama,
-                            "email" to email,
-                            "password" to password,
-                            "role" to "patient",
-                            "caregiver_id" to selectedCaregiver!!.id
-                        ))
-                    isLoading = false
-                    onNavigateBack()
+                    RawatKasihRepository.registerPatient(
+                        name = nama.trim(),
+                        email = email.trim(),
+                        phone = phone.trim(),
+                        password = password,
+                        caregiverId = selectedCaregiver!!.id
+                    )
+                    onRegisterSuccess()
                 } catch (e: Exception) {
-                    isLoading = false
-                    registerError = "Registrasi gagal. Coba lagi."
                     e.printStackTrace()
+                    registerError = e.message ?: "Unknown error"
+                } finally {
+                    isLoading = false
                 }
             }
         }
@@ -251,7 +250,7 @@ fun RegisterScreen(
             ) {
                 if (caregiverList.isEmpty() && !isLoadingCaregivers) {
                     DropdownMenuItem(
-                        text = { Text("Tidak ada caregiver tersedia", color = TextGray) },
+                        text = { Text("LIST KOSONG", color = TextGray) },
                         onClick = { dropdownExpanded = false }
                     )
                 } else {

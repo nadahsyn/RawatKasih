@@ -1,6 +1,5 @@
 package com.projekakhir.rawatkasih
 
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,22 +20,29 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.projekakhir.rawatkasih.data.AuthResult
+import com.projekakhir.rawatkasih.data.RawatKasihRepository
 import com.projekakhir.rawatkasih.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onNavigateToRegister: () -> Unit = {}
+    onNavigateToRegister: () -> Unit = {},
+    onLoginSuccess: (AuthResult) -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var emailError by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf("") }
+    var loginError by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     fun validateAndLogin() {
         emailError = ""
         passwordError = ""
+        loginError = ""
         var valid = true
 
         if (email.isEmpty()) {
@@ -57,7 +63,42 @@ fun LoginScreen(
 
         if (valid) {
             isLoading = true
-            // TODO: ganti dengan API call
+            scope.launch {
+                try {
+
+                    android.util.Log.d(
+                        "LOGIN",
+                        "Mulai login ke Supabase"
+                    )
+
+                    val session = RawatKasihRepository.login(
+                        email.trim(),
+                        password
+                    )
+
+                    android.util.Log.d(
+                        "LOGIN",
+                        "BERHASIL ${session.user.name} role=${session.user.role}"
+                    )
+
+                    onLoginSuccess(session)
+
+                } catch (e: Exception) {
+
+                    e.printStackTrace()
+
+                    android.util.Log.e(
+                        "LOGIN",
+                        e.message ?: "Unknown error",
+                        e
+                    )
+
+                    loginError = e.message ?: "Login gagal"
+
+                } finally {
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -184,6 +225,17 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
+
+        if (loginError.isNotEmpty()) {
+            Text(
+                text = loginError,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            )
+        }
 
         // ===== LOGIN BUTTON =====
         Button(
