@@ -75,6 +75,7 @@ import androidx.compose.runtime.LaunchedEffect
 fun PatientHomeScreen(
     initialSession: AuthResult,
     onEditProfile: () -> Unit,
+    onOpenHealth: () -> Unit,
     successMessage: String?,
     onMessageShown: () -> Unit
 ) {
@@ -104,6 +105,15 @@ fun PatientHomeScreen(
             )
 
             onMessageShown()
+        }
+    }
+    LaunchedEffect(message) {
+
+        if (message.isNotEmpty()) {
+
+            snackbarHostState.showSnackbar(message)
+
+            message = ""
         }
     }
     Scaffold(
@@ -216,9 +226,7 @@ fun PatientHomeScreen(
                             }
 
                             OutlinedButton(
-                                onClick = {
-
-                                },
+                                onClick = onOpenHealth,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(44.dp),
@@ -272,11 +280,11 @@ fun PatientHomeScreen(
                                     "Jumlah log = ${logs.size}"
                                 )
 
-                                message = "Status obat tersimpan."
+                                message = "Hebat! Jangan lupa tetap jaga kesehatan"
 
                             } catch (e: Exception) {
 
-                                message = "Status obat belum bisa disimpan."
+                                message = "Ups, status obat belum bisa disimpan. Coba lagi ya"
 
                             } finally {
 
@@ -370,7 +378,9 @@ fun PatientHomeScreen(
                         Button(
                             onClick = {
                                 val patientId = user.id ?: return@Button
+
                                 isSavingCondition = true
+
                                 scope.launch {
                                     try {
                                         RawatKasihRepository.saveDailyCondition(
@@ -382,10 +392,14 @@ fun PatientHomeScreen(
 
                                         conditionSaved = true
 
-                                        message = "Kondisi hari ini berhasil disimpan"
+                                        message = "Terima kasih sudah mengisi kondisi hari ini!"
+
                                     } catch (e: Exception) {
-                                        message = "Kondisi belum bisa disimpan."
+
+                                        message = "Ups, kondisi hari ini belum bisa disimpan. Coba lagi ya."
+
                                     } finally {
+
                                         isSavingCondition = false
                                     }
                                 }
@@ -398,13 +412,18 @@ fun PatientHomeScreen(
                                     scaleX = conditionScale
                                     scaleY = conditionScale
                                 },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryMint),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryMint,
+                                disabledContainerColor = InputBorder
+                            ),
                             shape = RoundedCornerShape(16.dp),
                             enabled =
-                                !isSavingCondition &&
+                                !conditionSaved &&
+                                        !isSavingCondition &&
                                         user.id != null &&
                                         kondisi.isNotBlank() &&
-                                        mood.isNotBlank()
+                                        mood.isNotBlank() &&
+                                        bloodPressure.isNotBlank()
                         ) {
                             when {
 
@@ -448,11 +467,6 @@ fun PatientHomeScreen(
                 ScheduleList(schedules = schedules, logs = logs)
             }
 
-            if (message.isNotEmpty()) {
-                item {
-                    Text(text = message, color = TextSecondary, fontSize = 13.sp)
-                }
-            }
         }
     }
 }
