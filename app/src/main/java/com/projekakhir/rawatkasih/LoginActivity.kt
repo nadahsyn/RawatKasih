@@ -102,11 +102,20 @@ private fun RawatKasihApp() {
         }
         is AppRoute.Health -> {
             HealthScreen(
+                userId = currentRoute.session.user.id!!,
+
+                successMessage = successMessage,
+
+                onMessageShown = {
+                    successMessage = null
+                },
+
                 onBack = {
                     route = AppRoute.Home(
                         currentRoute.session
                     )
                 },
+
                 onEditHealthProfile = {
                     route = AppRoute.EditHealthProfile(
                         currentRoute.session
@@ -117,13 +126,24 @@ private fun RawatKasihApp() {
         is AppRoute.EditHealthProfile -> {
 
             EditHealthProfileScreen(
+                userId = currentRoute.session.user.id!!,
+
                 onBack = {
+                    route = AppRoute.Health(
+                        currentRoute.session
+                    )
+                },
+
+                onProfileSaved = {
+
+                    successMessage =
+                        "Profil kesehatan berhasil diperbarui!"
+
                     route = AppRoute.Health(
                         currentRoute.session
                     )
                 }
             )
-
         }
     }
 }

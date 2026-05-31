@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import io.github.jan.supabase.postgrest.query.Columns
+import com.projekakhir.rawatkasih.data.HealthProfile
 
 @Serializable
 data class AppUser(
@@ -234,6 +235,65 @@ object RawatKasihRepository {
         )
     }
 
+    suspend fun loadHealthProfile(
+        patientId: Long
+    ): HealthProfile? {
+
+        return client.from("health_profiles")
+            .select {
+                filter {
+                    eq("patient_id", patientId)
+                }
+            }
+            .decodeList<HealthProfile>()
+            .firstOrNull()
+    }
+
+    suspend fun saveHealthProfile(
+        patientId: Long,
+        height: Int?,
+        weight: Int?,
+        bloodType: String?,
+        allergy: String?,
+        medicalHistory: String?
+    ) {
+
+        val existingProfile =
+            loadHealthProfile(patientId)
+
+        if (existingProfile == null) {
+
+            client.from("health_profiles")
+                .insert(
+                    HealthProfile(
+                        patientId = patientId,
+                        height = height,
+                        weight = weight,
+                        bloodType = bloodType,
+                        allergy = allergy,
+                        medicalHistory = medicalHistory
+                    )
+                )
+
+        } else {
+
+            client.from("health_profiles")
+                .update(
+                    UpdateHealthProfileRequest(
+                        height = height,
+                        weight = weight,
+                        bloodType = bloodType,
+                        allergy = allergy,
+                        medicalHistory = medicalHistory
+                    )
+                ) {
+                    filter {
+                        eq("patient_id", patientId)
+                    }
+                }
+        }
+    }
+
     @Serializable
     private data class UpdateProfileRequest(
         val name: String,
@@ -241,7 +301,21 @@ object RawatKasihRepository {
         val age: Int?,
         val gender: String?
     )
+    @Serializable
+    private data class UpdateHealthProfileRequest(
 
+        val height: Int?,
+
+        val weight: Int?,
+
+        @SerialName("blood_type")
+        val bloodType: String?,
+
+        val allergy: String?,
+
+        @SerialName("medical_history")
+        val medicalHistory: String?
+    )
     suspend fun updateProfile(
         userId: Long,
         name: String,
@@ -321,4 +395,5 @@ object RawatKasihRepository {
     private fun today(): String = dateFormat.format(Date())
 
     private fun nowTimestamp(): String = timestampFormat.format(Date())
+
 }

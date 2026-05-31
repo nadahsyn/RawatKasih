@@ -29,19 +29,68 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Scaffold
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import com.projekakhir.rawatkasih.data.HealthProfile
+import com.projekakhir.rawatkasih.data.RawatKasihRepository
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.CircularProgressIndicator
 
 @Composable
 fun HealthScreen(
+    userId: Long,
     onBack: () -> Unit,
-    onEditHealthProfile: () -> Unit
+    onEditHealthProfile: () -> Unit,
+    successMessage: String?,
+    onMessageShown: () -> Unit
 ) {
-    Scaffold { paddingValues ->
+    val snackbarHostState = remember {
+        SnackbarHostState()
+    }
+
+    var profile by remember {
+        mutableStateOf<HealthProfile?>(null)
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    LaunchedEffect(Unit) {
+
+        profile =
+            RawatKasihRepository.loadHealthProfile(
+                userId
+            )
+
+        isLoading = false
+    }
+
+    LaunchedEffect(successMessage) {
+
+        successMessage?.let {
+
+            snackbarHostState.showSnackbar(it)
+
+            onMessageShown()
+        }
+    }
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        }
+    ) { paddingValues ->
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(24.dp)
+
         ) {
 
             Row(
@@ -77,72 +126,98 @@ fun HealthScreen(
                     containerColor = Surface
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                if (isLoading) {
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        Card(
-                            shape = CircleShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = CardMint
-                            )
-                        ) {
+                        CircularProgressIndicator(
+                            color = PrimaryMint
+                        )
 
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = null,
-                                tint = PrimaryMint,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(
+                            modifier = Modifier.height(12.dp)
+                        )
 
                         Text(
-                            text = "Profil Kesehatan",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "Memuat data kesehatan..."
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                } else {
 
-                    HealthInfoRow(
-                        label = "Tinggi Badan",
-                        value = "- cm"
-                    )
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
 
-                    HealthInfoRow(
-                        label = "Berat Badan",
-                        value = "- kg"
-                    )
+                            Card(
+                                shape = CircleShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = CardMint
+                                )
+                            ) {
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = PrimaryMint,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
 
-                    HealthInfoRow(
-                        label = "Golongan Darah",
-                        value = "-"
-                    )
+                            Spacer(modifier = Modifier.width(10.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Profil Kesehatan",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                    HealthInfoRow(
-                        label = "Alergi",
-                        value = "-"
-                    )
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        HealthInfoRow(
+                            label = "Tinggi Badan",
+                            value = "${profile?.height ?: "-"} cm"
+                        )
 
-                    HealthInfoRow(
-                        label = "Riwayat Penyakit",
-                        value = "-"
-                    )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        HealthInfoRow(
+                            label = "Berat Badan",
+                            value = "${profile?.weight ?: "-"} kg"
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        HealthInfoRow(
+                            label = "Golongan Darah",
+                            value = profile?.bloodType ?: "-"
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        HealthInfoRow(
+                            label = "Alergi",
+                            value = profile?.allergy ?: "-"
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        HealthInfoRow(
+                            label = "Riwayat Penyakit",
+                            value = profile?.medicalHistory ?: "-"
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
