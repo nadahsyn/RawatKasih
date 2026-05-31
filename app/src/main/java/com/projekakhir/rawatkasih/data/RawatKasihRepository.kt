@@ -97,7 +97,8 @@ data class DailyCondition(
     val condition: String,
     val mood: String,
     @SerialName("blood_pressure")
-    val bloodPressure: String? = null
+    val bloodPressure: String? = null,
+    val notes: String? = null
 )
 
 data class AuthResult(
@@ -206,6 +207,19 @@ object RawatKasihRepository {
         return loadTodayMedicineLogs(patientId)
     }
 
+    suspend fun loadDailyConditions(
+        patientId: Long
+    ): List<DailyCondition> {
+
+        return client.from("daily_conditions")
+            .select {
+                filter {
+                    eq("patient_id", patientId)
+                }
+            }
+            .decodeList()
+    }
+
     suspend fun markMedicineTaken(schedule: MedicineSchedule) {
         client.from("medicine_logs").insert(
             MedicineLog(
@@ -222,7 +236,8 @@ object RawatKasihRepository {
         patientId: Long,
         condition: String,
         mood: String,
-        bloodPressure: String
+        bloodPressure: String,
+        notes: String?
     ) {
         client.from("daily_conditions").insert(
             DailyCondition(
@@ -230,7 +245,8 @@ object RawatKasihRepository {
                 date = today(),
                 condition = condition,
                 mood = mood,
-                bloodPressure = bloodPressure.ifBlank { null }
+                bloodPressure = bloodPressure.ifBlank { null },
+                notes = notes?.ifBlank { null }
             )
         )
     }

@@ -50,6 +50,7 @@ fun HealthScreen(
     userId: Long,
     onBack: () -> Unit,
     onEditHealthProfile: () -> Unit,
+    onOpenHistory: () -> Unit,
     successMessage: String?,
     onMessageShown: () -> Unit
 ) {
@@ -252,7 +253,7 @@ fun HealthScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-
+                        onOpenHistory()
                     },
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(

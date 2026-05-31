@@ -89,6 +89,11 @@ fun PatientHomeScreen(
     var kondisi by remember { mutableStateOf(initialSession.condition?.condition ?: "") }
     var mood by remember { mutableStateOf(initialSession.condition?.mood ?: "") }
     var bloodPressure by remember { mutableStateOf(initialSession.condition?.bloodPressure ?: "") }
+    var notes by remember {
+        mutableStateOf(
+            initialSession.condition?.notes ?: ""
+        )
+    }
     var isSavingCondition by remember { mutableStateOf(false) }
     var conditionSaved by remember {
         mutableStateOf(initialSession.condition != null)
@@ -367,6 +372,29 @@ fun PatientHomeScreen(
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = {
+                                notes = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = {
+                                Text("Catatan Tambahan (Opsional)")
+                            },
+                            placeholder = {
+                                Text("Tuliskan keluhan atau kondisi lain")
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = PrimaryMint,
+                                unfocusedBorderColor = InputBorder,
+                                focusedLabelColor = PrimaryMint
+                            ),
+                            minLines = 3
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
                         val conditionInteraction = remember { MutableInteractionSource() }
 
                         val conditionPressed by conditionInteraction.collectIsPressedAsState()
@@ -387,7 +415,8 @@ fun PatientHomeScreen(
                                             patientId = patientId,
                                             condition = kondisi,
                                             mood = mood,
-                                            bloodPressure = bloodPressure
+                                            bloodPressure = bloodPressure,
+                                            notes = notes
                                         )
 
                                         conditionSaved = true

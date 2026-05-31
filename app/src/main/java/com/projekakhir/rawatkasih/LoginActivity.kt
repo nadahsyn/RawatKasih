@@ -15,6 +15,7 @@ import com.projekakhir.rawatkasih.screens.PatientHomeScreen
 import com.projekakhir.rawatkasih.ui.theme.RawatKasihTheme
 import com.projekakhir.rawatkasih.screens.EditProfileScreen
 import com.projekakhir.rawatkasih.screens.HealthScreen
+import com.projekakhir.rawatkasih.screens.HealthHistoryScreen
 
 private sealed interface AppRoute {
     data object Login : AppRoute
@@ -23,6 +24,10 @@ private sealed interface AppRoute {
     data class EditProfile(val session: AuthResult) : AppRoute
     data class Health(val session: AuthResult) : AppRoute
     data class EditHealthProfile(val session: AuthResult) : AppRoute
+    data class HealthHistory(
+        val session: AuthResult
+    ) : AppRoute
+
 }
 
 class LoginActivity : ComponentActivity() {
@@ -120,6 +125,12 @@ private fun RawatKasihApp() {
                     route = AppRoute.EditHealthProfile(
                         currentRoute.session
                     )
+                },
+
+                onOpenHistory = {
+                    route = AppRoute.HealthHistory(
+                        currentRoute.session
+                    )
                 }
             )
         }
@@ -139,6 +150,18 @@ private fun RawatKasihApp() {
                     successMessage =
                         "Profil kesehatan berhasil diperbarui!"
 
+                    route = AppRoute.Health(
+                        currentRoute.session
+                    )
+                }
+            )
+        }
+        is AppRoute.HealthHistory -> {
+
+            HealthHistoryScreen(
+                userId = currentRoute.session.user.id!!,
+
+                onBack = {
                     route = AppRoute.Health(
                         currentRoute.session
                     )
