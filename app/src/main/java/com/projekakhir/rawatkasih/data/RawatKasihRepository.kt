@@ -1,32 +1,28 @@
 package com.projekakhir.rawatkasih.data
 
 import com.projekakhir.rawatkasih.SupabaseClient
+import com.projekakhir.rawatkasih.data.local.*
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import io.github.jan.supabase.postgrest.query.Columns
-import com.projekakhir.rawatkasih.data.HealthProfile
+import java.util.*
 
 @Serializable
 data class AppUser(
     val id: Long? = null,
-
-    @SerialName("auth_id")
-    val authId: String? = null,
-
+    @SerialName("auth_id") val authId: String? = null,
     val name: String,
     val email: String? = null,
     val phone: String? = null,
-
     val role: String,
-
-    @SerialName("caregiver_id")
-    val caregiverId: Long? = null,
+    @SerialName("caregiver_id") val caregiverId: Long? = null,
 
     val age: Int? = null,
     val gender: String? = null,
@@ -37,67 +33,44 @@ data class AppUser(
     val height: Int? = null,
     val weight: Int? = null,
 
+    val allergy: String? = null,
+
+    @SerialName("medical_history")
+    val medicalHistory: String? = null,
+
     @SerialName("profile_image")
     val profileImage: String? = null
 )
 
 @Serializable
-data class CaregiverOption(
-    val id: Long,
-    val name: String
-)
-
-@Serializable
-data class UserInsert(
-    @SerialName("auth_id")
-    val authId: String?,
-
-    val name: String,
-    val email: String,
-    val phone: String,
-    val role: String,
-
-    @SerialName("caregiver_id")
-    val caregiverId: Long
-)
-
-@Serializable
 data class MedicineSchedule(
-    val id: Long,
-    @SerialName("patient_id")
-    val patientId: Long,
-    @SerialName("medicine_name")
-    val medicineName: String,
+    val id: Long? = null,
+    @SerialName("patient_id") val patientId: Long,
+    @SerialName("medicine_name") val medicineName: String,
     val dosage: String? = null,
-    @SerialName("schedule_time")
-    val scheduleTime: String,
-    val note: String? = null
+    @SerialName("schedule_time") val scheduleTime: String,
+    val note: String? = null,
+    @SerialName("is_active") val isActive: Boolean = true
 )
 
 @Serializable
 data class MedicineLog(
     val id: Long? = null,
-    @SerialName("schedule_id")
-    val scheduleId: Long,
-    @SerialName("patient_id")
-    val patientId: Long,
-    @SerialName("taken_date")
-    val takenDate: String,
-    @SerialName("taken_at")
-    val takenAt: String? = null,
+    @SerialName("schedule_id") val scheduleId: Long,
+    @SerialName("patient_id") val patientId: Long,
+    @SerialName("taken_date") val takenDate: String,
+    @SerialName("taken_at") val takenAt: String? = null,
     val status: String = "taken"
 )
 
 @Serializable
 data class DailyCondition(
     val id: Long? = null,
-    @SerialName("patient_id")
-    val patientId: Long,
+    @SerialName("patient_id") val patientId: Long,
     val date: String,
     val condition: String,
     val mood: String,
-    @SerialName("blood_pressure")
-    val bloodPressure: String? = null,
+    @SerialName("blood_pressure") val bloodPressure: String? = null,
     val notes: String? = null
 )
 
@@ -108,23 +81,52 @@ data class AuthResult(
     val condition: DailyCondition? = null
 )
 
-object RawatKasihRepository {
+@Serializable
+data class CaregiverOption(val id: Long, val name: String)
+
+@Serializable
+data class UpdateProfileRequest(
+    val name: String,
+    val phone: String,
+    val age: Int?,
+    val gender: String?
+)
+
+@Serializable
+data class UpdateHealthProfileRequest(
+
+    @SerialName("patient_id")
+    val patientId: Long,
+
+    val height: Int?,
+
+    val weight: Int?,
+
+    @SerialName("blood_type")
+    val bloodType: String?,
+
+    val allergy: String?,
+
+    @SerialName("medical_history")
+    val medicalHistory: String?
+)
+
+class RawatKasihRepository(private val dao: RawatKasihDao) {
     private val client = SupabaseClient.client
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-    private val timestampFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
 
     suspend fun login(email: String, password: String): AuthResult {
         client.auth.signInWith(Email) {
             this.email = email
             this.password = password
         }
-
-        val authUser = client.auth.currentSessionOrNull()?.user
-            ?: error("Sesi login tidak ditemukan.")
+        val authUser = client.auth.currentSessionOrNull()?.user ?: error("Gagal login")
         val profile = loadCurrentProfile(authUser.id)
+        dao.insertUser(profile.toEntity())
+        
         return if (profile.role == "patient") {
             val schedules = loadMedicineSchedules(profile.id)
-            val logs = loadTodayMedicineLogs(profile.id)
+            val logs = loadPatientMedicineLogs(profile.id) // Konsisten dengan loadPatientMedicineLogs
             val condition = loadTodayCondition(profile.id)
             AuthResult(profile, schedules, logs, condition)
         } else {
@@ -132,206 +134,131 @@ object RawatKasihRepository {
         }
     }
 
-    suspend fun registerPatient(
-        name: String,
-        email: String,
-        phone: String,
-        password: String,
-        caregiverId: Long
-    ) {
-        val user = client.auth.signUpWith(Email) {
-            this.email = email
-            this.password = password
-        }
-
+    suspend fun registerPatient(name: String, email: String, phone: String, password: String, caregiverId: Long) {
+        val user = client.auth.signUpWith(Email) { this.email = email; this.password = password }
         val authId = user?.id ?: client.auth.currentSessionOrNull()?.user?.id
-        client.from("users").insert(
-            UserInsert(
-                authId = authId,
-                name = name,
-                email = email,
-                phone = phone,
-                role = "patient",
-                caregiverId = caregiverId
-            )
-        )
+        client.from("users").insert(mapOf(
+            "auth_id" to authId, "name" to name, "email" to email, 
+            "phone" to phone, "role" to "patient", "caregiver_id" to caregiverId
+        ))
     }
 
     suspend fun loadCaregivers(): List<CaregiverOption> {
-
-        android.util.Log.d(
-            "RAWATKASIH",
-            "QUERY KE SUPABASE"
-        )
-
-        val result = client.from("users")
-            .select(columns = Columns.list("id", "name")) {
-                filter {
-                    eq("role", "caregiver")
-                }
-            }
-            .decodeList<CaregiverOption>()
-
-        android.util.Log.d(
-            "RAWATKASIH",
-            "HASIL = $result"
-        )
-
-        return result
+        return client.from("users").select(columns = Columns.list("id", "name")) {
+            filter { eq("role", "caregiver") }
+        }.decodeList()
     }
-    suspend fun loadCaregiverPatients(caregiverId: Long?): List<AppUser> {
-        if (caregiverId == null) return emptyList()
 
-        return client.from("users")
-            .select {
-                filter {
-                    eq("caregiver_id", caregiverId)
-                    eq("role", "patient")
-                }
-            }
-            .decodeList<AppUser>()
+    fun getPatientsFlow(caregiverId: Long): Flow<List<AppUser>> {
+        return dao.getPatientsForCaregiver(caregiverId).map { list ->
+            list.map { it.toModel() }
+        }
+    }
+
+    suspend fun refreshCaregiverPatients(caregiverId: Long) {
+        val remotePatients = client.from("users").select {
+            filter { eq("caregiver_id", caregiverId); eq("role", "patient") }
+        }.decodeList<AppUser>()
+        remotePatients.forEach { dao.insertUser(it.toEntity()) }
+    }
+
+    suspend fun loadCaregiverPatients(caregiverId: Long): List<AppUser> {
+        return client.from("users").select {
+            filter { eq("caregiver_id", caregiverId); eq("role", "patient") }
+        }.decodeList()
+    }
+
+    suspend fun loadUserById(userId: Long): AppUser {
+        val local = dao.getUserById(userId)
+        if (local != null) return local.toModel()
+        val remote = client.from("users").select { filter { eq("id", userId) } }.decodeSingle<AppUser>()
+        dao.insertUser(remote.toEntity())
+        return remote
     }
 
     suspend fun loadPatientHome(user: AppUser): AuthResult {
         val schedules = loadMedicineSchedules(user.id)
-        val logs = loadTodayMedicineLogs(user.id)
+        val logs = loadPatientMedicineLogs(user.id)
         val condition = loadTodayCondition(user.id)
         return AuthResult(user, schedules, logs, condition)
     }
 
+    suspend fun saveDailyCondition(patientId: Long, cond: String, mood: String, bp: String, notes: String) {
+        val condition = DailyCondition(patientId = patientId, date = today(), condition = cond, mood = mood, bloodPressure = bp, notes = notes)
+        client.from("daily_conditions").insert(condition)
+        dao.insertCondition(condition.toEntity())
+    }
+
+    suspend fun saveMedicineSchedule(schedule: MedicineSchedule) {
+        client.from("medicine_schedules").insert(schedule)
+    }
+
+    suspend fun loadMedicineSchedules(patientId: Long?): List<MedicineSchedule> {
+        if (patientId == null) return emptyList()
+        val remote = client.from("medicine_schedules").select { filter { eq("patient_id", patientId) } }.decodeList<MedicineSchedule>()
+        dao.insertSchedules(remote.map { it.toEntity() })
+        return remote
+    }
+
+    suspend fun markMedicineTaken(schedule: MedicineSchedule) {
+        val log = MedicineLog(scheduleId = schedule.id ?: 0, patientId = schedule.patientId, takenDate = today())
+        client.from("medicine_logs").insert(log)
+        dao.insertMedicineLogs(listOf(log.toEntity()))
+    }
+
+    suspend fun loadPatientMedicineLogs(patientId: Long?): List<MedicineLog> {
+        if (patientId == null) return emptyList()
+        return client.from("medicine_logs").select {
+            filter { eq("patient_id", patientId); eq("taken_date", today()) }
+        }.decodeList()
+    }
+
+    suspend fun loadTodayCondition(patientId: Long?): DailyCondition? {
+        if (patientId == null) return null
+        return client.from("daily_conditions").select {
+            filter { eq("patient_id", patientId); eq("date", today()) }
+        }.decodeList<DailyCondition>().lastOrNull()
+    }
+
+    // Fungsi yang hilang untuk Error 2
     suspend fun loadPatientCondition(patientId: Long?): DailyCondition? {
         return loadTodayCondition(patientId)
     }
 
-    suspend fun loadPatientMedicineLogs(patientId: Long?): List<MedicineLog> {
-        return loadTodayMedicineLogs(patientId)
+    suspend fun loadDailyConditions(patientId: Long): List<DailyCondition> {
+        return client.from("daily_conditions").select { filter { eq("patient_id", patientId) } }.decodeList()
     }
 
-    suspend fun loadDailyConditions(
-        patientId: Long
-    ): List<DailyCondition> {
+    suspend fun uploadProfileImage(
+        userId: Long,
+        fileBytes: ByteArray
+    ): String {
 
-        return client.from("daily_conditions")
-            .select {
-                filter {
-                    eq("patient_id", patientId)
-                }
-            }
-            .decodeList()
-    }
+        val fileName = "avatar_${userId}_${System.currentTimeMillis()}.jpg"
 
-    suspend fun markMedicineTaken(schedule: MedicineSchedule) {
-        client.from("medicine_logs").insert(
-            MedicineLog(
-                scheduleId = schedule.id,
-                patientId = schedule.patientId,
-                takenDate = today(),
-                takenAt = nowTimestamp(),
-                status = "taken"
+        client.storage
+            .from("Avatars")
+            .upload(
+                path = fileName,
+                data = fileBytes,
+                upsert = true
             )
-        )
-    }
 
-    suspend fun saveDailyCondition(
-        patientId: Long,
-        condition: String,
-        mood: String,
-        bloodPressure: String,
-        notes: String?
-    ) {
-        client.from("daily_conditions").insert(
-            DailyCondition(
-                patientId = patientId,
-                date = today(),
-                condition = condition,
-                mood = mood,
-                bloodPressure = bloodPressure.ifBlank { null },
-                notes = notes?.ifBlank { null }
-            )
-        )
-    }
+        val publicUrl = client.storage
+            .from("Avatars")
+            .publicUrl(fileName)
 
-    suspend fun loadHealthProfile(
-        patientId: Long
-    ): HealthProfile? {
-
-        return client.from("health_profiles")
-            .select {
-                filter {
-                    eq("patient_id", patientId)
-                }
+        client.from("users").update(
+            mapOf("profile_image" to publicUrl)
+        ) {
+            filter {
+                eq("id", userId)
             }
-            .decodeList<HealthProfile>()
-            .firstOrNull()
-    }
-
-    suspend fun saveHealthProfile(
-        patientId: Long,
-        height: Int?,
-        weight: Int?,
-        bloodType: String?,
-        allergy: String?,
-        medicalHistory: String?
-    ) {
-
-        val existingProfile =
-            loadHealthProfile(patientId)
-
-        if (existingProfile == null) {
-
-            client.from("health_profiles")
-                .insert(
-                    HealthProfile(
-                        patientId = patientId,
-                        height = height,
-                        weight = weight,
-                        bloodType = bloodType,
-                        allergy = allergy,
-                        medicalHistory = medicalHistory
-                    )
-                )
-
-        } else {
-
-            client.from("health_profiles")
-                .update(
-                    UpdateHealthProfileRequest(
-                        height = height,
-                        weight = weight,
-                        bloodType = bloodType,
-                        allergy = allergy,
-                        medicalHistory = medicalHistory
-                    )
-                ) {
-                    filter {
-                        eq("patient_id", patientId)
-                    }
-                }
         }
+
+        return publicUrl
     }
 
-    @Serializable
-    private data class UpdateProfileRequest(
-        val name: String,
-        val phone: String?,
-        val age: Int?,
-        val gender: String?
-    )
-    @Serializable
-    private data class UpdateHealthProfileRequest(
-
-        val height: Int?,
-
-        val weight: Int?,
-
-        @SerialName("blood_type")
-        val bloodType: String?,
-
-        val allergy: String?,
-
-        @SerialName("medical_history")
-        val medicalHistory: String?
-    )
     suspend fun updateProfile(
         userId: Long,
         name: String,
@@ -339,77 +266,90 @@ object RawatKasihRepository {
         age: Int?,
         gender: String?
     ) {
-        client.from("users")
-            .update(
-                UpdateProfileRequest(
-                    name = name,
-                    phone = phone.ifBlank { null },
-                    age = age,
-                    gender = gender
-                )
-            ) {
-                filter {
-                    eq("id", userId)
-                }
+
+        val request = UpdateProfileRequest(
+            name = name,
+            phone = phone,
+            age = age,
+            gender = gender
+        )
+
+        client.from("users").update(request) {
+            filter {
+                eq("id", userId)
             }
-    }
-    suspend fun loadUserById(userId: Long): AppUser {
-        return client.from("users")
+        }
+
+        val updated = client.from("users")
             .select {
                 filter {
                     eq("id", userId)
                 }
             }
-            .decodeSingle()
+            .decodeSingle<AppUser>()
+
+        dao.insertUser(updated.toEntity())
     }
+
+    suspend fun loadHealthProfile(patientId: Long): HealthProfile? {
+        return client.from("health_profiles").select { filter { eq("patient_id", patientId) } }.decodeList<HealthProfile>().firstOrNull()
+    }
+
+    suspend fun saveHealthProfile(
+        patientId: Long,
+        h: Int?,
+        w: Int?,
+        bt: String?,
+        al: String?,
+        mh: String?
+    ) {
+
+        val request = UpdateHealthProfileRequest(
+            patientId = patientId,
+            height = h,
+            weight = w,
+            bloodType = bt,
+            allergy = al,
+            medicalHistory = mh
+        )
+
+        client.from("health_profiles")
+            .upsert(request)
+    }
+
     private suspend fun loadCurrentProfile(authId: String): AppUser {
-        return client.from("users")
-            .select {
-                filter {
-                    eq("auth_id", authId)
-                }
-            }
-            .decodeSingle()
-    }
-
-    private suspend fun loadMedicineSchedules(patientId: Long?): List<MedicineSchedule> {
-        if (patientId == null) return emptyList()
-        return client.from("medicine_schedules")
-            .select {
-                filter {
-                    eq("patient_id", patientId)
-                }
-            }
-            .decodeList()
-    }
-
-    private suspend fun loadTodayMedicineLogs(patientId: Long?): List<MedicineLog> {
-        if (patientId == null) return emptyList()
-        return client.from("medicine_logs")
-            .select {
-                filter {
-                    eq("patient_id", patientId)
-                    eq("taken_date", today())
-                }
-            }
-            .decodeList()
-    }
-
-    private suspend fun loadTodayCondition(patientId: Long?): DailyCondition? {
-        if (patientId == null) return null
-        return client.from("daily_conditions")
-            .select {
-                filter {
-                    eq("patient_id", patientId)
-                    eq("date", today())
-                }
-            }
-            .decodeList<DailyCondition>()
-            .lastOrNull()
+        return client.from("users").select { filter { eq("auth_id", authId) } }.decodeSingle()
     }
 
     private fun today(): String = dateFormat.format(Date())
 
-    private fun nowTimestamp(): String = timestampFormat.format(Date())
-
+    private fun AppUser.toEntity() =
+        UserEntity(
+            id = id!!,
+            authId = authId,
+            name = name,
+            email = email,
+            phone = phone,
+            role = role,
+            caregiverId = caregiverId,
+            age = age,
+            gender = gender,
+            profileImage = profileImage
+        )
+    private fun UserEntity.toModel() =
+        AppUser(
+            id = id,
+            authId = authId,
+            name = name,
+            email = email,
+            phone = phone,
+            role = role,
+            caregiverId = caregiverId,
+            age = age,
+            gender = gender,
+            profileImage = profileImage
+        )
+    private fun MedicineSchedule.toEntity() = MedicineScheduleEntity(id ?: 0, patientId, medicineName, dosage, scheduleTime, note, isActive)
+    private fun DailyCondition.toEntity() = DailyConditionEntity(remoteId = id, patientId = patientId, date = date, condition = condition, mood = mood, bloodPressure = bloodPressure, notes = notes)
+    private fun MedicineLog.toEntity() = MedicineLogEntity(scheduleId = scheduleId, patientId = patientId, takenDate = takenDate, status = status)
 }

@@ -20,29 +20,32 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.projekakhir.rawatkasih.data.AuthResult
-import com.projekakhir.rawatkasih.data.RawatKasihRepository
 import com.projekakhir.rawatkasih.ui.theme.*
-import kotlinx.coroutines.launch
+import com.projekakhir.rawatkasih.viewmodel.AuthViewModel
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
-    onLoginSuccess: (AuthResult) -> Unit = {}
+    onLoginSuccess: (AuthResult) -> Unit = {},
+    viewModel: AuthViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    
     var emailError by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf("") }
-    var loginError by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    
+    val isLoading by viewModel.isLoading.collectAsState()
+    val loginError by viewModel.error.collectAsState()
 
     fun validateAndLogin() {
         emailError = ""
         passwordError = ""
-        loginError = ""
         var valid = true
 
         if (email.isEmpty()) {
@@ -62,43 +65,7 @@ fun LoginScreen(
         }
 
         if (valid) {
-            isLoading = true
-            scope.launch {
-                try {
-
-                    android.util.Log.d(
-                        "LOGIN",
-                        "Mulai login ke Supabase"
-                    )
-
-                    val session = RawatKasihRepository.login(
-                        email.trim(),
-                        password
-                    )
-
-                    android.util.Log.d(
-                        "LOGIN",
-                        "BERHASIL ${session.user.name} role=${session.user.role}"
-                    )
-
-                    onLoginSuccess(session)
-
-                } catch (e: Exception) {
-
-                    e.printStackTrace()
-
-                    android.util.Log.e(
-                        "LOGIN",
-                        e.message ?: "Unknown error",
-                        e
-                    )
-
-                    loginError = e.message ?: "Login gagal"
-
-                } finally {
-                    isLoading = false
-                }
-            }
+            viewModel.login(email.trim(), password, onLoginSuccess)
         }
     }
 
@@ -110,8 +77,6 @@ fun LoginScreen(
             .padding(top = 56.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // ===== LOGO =====
         Surface(
             modifier = Modifier.size(90.dp),
             shape = CircleShape,
@@ -160,7 +125,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ===== EMAIL =====
         OutlinedTextField(
             value = email,
             onValueChange = { email = it; emailError = "" },
@@ -185,7 +149,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== PASSWORD =====
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; passwordError = "" },
@@ -195,11 +158,19 @@ fun LoginScreen(
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary)
             },
             trailingIcon = {
-                TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(
-                        text = if (passwordVisible) "Sembunyikan" else "Tampilkan",
-                        fontSize = 11.sp,
-                        color = Primary
+                IconButton(
+                    onClick = {
+                        passwordVisible = !passwordVisible
+                    }
+                ) {
+                    Icon(
+                        imageVector =
+                            if (passwordVisible)
+                                Icons.Filled.Visibility
+                            else
+                                Icons.Filled.VisibilityOff,
+                        contentDescription = null,
+                        tint = Primary
                     )
                 }
             },
@@ -226,9 +197,9 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (loginError.isNotEmpty()) {
+        if (loginError != null) {
             Text(
-                text = loginError,
+                text = loginError!!,
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 13.sp,
                 modifier = Modifier
@@ -237,7 +208,6 @@ fun LoginScreen(
             )
         }
 
-        // ===== LOGIN BUTTON =====
         Button(
             onClick = { validateAndLogin() },
             modifier = Modifier
@@ -247,17 +217,20 @@ fun LoginScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Primary),
             enabled = !isLoading
         ) {
-            Text(
-                text = if (isLoading) "Memuat..." else "Masuk",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = White
-            )
+            if (isLoading) {
+                CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp))
+            } else {
+                Text(
+                    text = "Masuk",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = White
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== DIVIDER =====
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -269,7 +242,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== REGISTER LINK =====
         Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically

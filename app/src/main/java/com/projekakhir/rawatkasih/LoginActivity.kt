@@ -4,168 +4,138 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import com.projekakhir.rawatkasih.data.AuthResult
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import com.projekakhir.rawatkasih.data.AppUser
 import com.projekakhir.rawatkasih.screen.CaregiverHomeScreen
-import com.projekakhir.rawatkasih.screens.EditHealthProfileScreen
-import com.projekakhir.rawatkasih.screens.PatientHomeScreen
+import com.projekakhir.rawatkasih.screens.*
 import com.projekakhir.rawatkasih.ui.theme.RawatKasihTheme
-import com.projekakhir.rawatkasih.screens.EditProfileScreen
-import com.projekakhir.rawatkasih.screens.HealthScreen
-import com.projekakhir.rawatkasih.screens.HealthHistoryScreen
+import com.projekakhir.rawatkasih.viewmodel.ViewModelFactory
+import kotlinx.serialization.Serializable
 
-private sealed interface AppRoute {
-    data object Login : AppRoute
-    data object Register : AppRoute
-    data class Home(val session: AuthResult) : AppRoute
-    data class EditProfile(val session: AuthResult) : AppRoute
-    data class Health(val session: AuthResult) : AppRoute
-    data class EditHealthProfile(val session: AuthResult) : AppRoute
-    data class HealthHistory(
-        val session: AuthResult
-    ) : AppRoute
-
-}
+@Serializable object LoginDest
+@Serializable object RegisterDest
+@Serializable data class PatientHomeDest(val userId: Long)
+@Serializable data class CaregiverHomeDest(val userId: Long, val name: String)
+@Serializable data class EditProfileDest(val userId: Long)
+@Serializable data class HealthDest(val userId: Long)
+@Serializable data class EditHealthProfileDest(val userId: Long)
+@Serializable data class HealthHistoryDest(val userId: Long)
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             RawatKasihTheme {
-                RawatKasihApp()
+                RawatKasihNavHost()
             }
         }
     }
 }
 
 @Composable
-private fun RawatKasihApp() {
-    var successMessage by remember {
-        mutableStateOf<String?>(null)
-    }
-    var route by remember { mutableStateOf<AppRoute>(AppRoute.Login) }
+private fun RawatKasihNavHost() {
+    val navController = rememberNavController()
+    val context = LocalContext.current
+    val app = context.applicationContext as RawatKasihApplication
+    val factory = ViewModelFactory(app.repository)
 
-    when (val currentRoute = route) {
-        AppRoute.Login -> LoginScreen(
-            onNavigateToRegister = { route = AppRoute.Register },
-            onLoginSuccess = { route = AppRoute.Home(it) }
-        )
-
-        AppRoute.Register -> RegisterScreen(
-            onNavigateBack = { route = AppRoute.Login },
-            onRegisterSuccess = { route = AppRoute.Login }
-        )
-
-        is AppRoute.Home -> {
-            if (currentRoute.session.user.role == "caregiver") {
-                CaregiverHomeScreen(user = currentRoute.session.user)
-            } else {
-                PatientHomeScreen(
-                    initialSession = currentRoute.session,
-                    successMessage = successMessage,
-                    onMessageShown = {
-                        successMessage = null
-                    },
-                    onEditProfile = {
-                        route = AppRoute.EditProfile(
-                            currentRoute.session
-                        )
-                    },
-                    onOpenHealth = {
-                        route = AppRoute.Health(
-                            currentRoute.session
-                        )
+    NavHost(
+        navController = navController,
+        startDestination = LoginDest
+    ) {
+        composable<LoginDest> {
+            LoginScreen(
+                viewModel = viewModel(factory = factory),
+                onNavigateToRegister = { navController.navigate(RegisterDest) },
+                onLoginSuccess = { result ->
+                    val user = result.user
+                    if (user.role == "caregiver") {
+                        navController.navigate(CaregiverHomeDest(user.id!!, user.name)) {
+                            popUpTo(LoginDest) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(PatientHomeDest(user.id!!)) {
+                            popUpTo(LoginDest) { inclusive = true }
+                        }
                     }
-                )
-            }
+                }
+            )
         }
 
-        is AppRoute.EditProfile -> {
+        composable<RegisterDest> {
+            RegisterScreen(
+                viewModel = viewModel(factory = factory),
+                onNavigateBack = { navController.popBackStack() },
+                onRegisterSuccess = {
+                    navController.navigate(LoginDest) {
+                        popUpTo(RegisterDest) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<PatientHomeDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<PatientHomeDest>()
+            PatientHomeScreen(
+                userId = dest.userId,
+                viewModel = viewModel(factory = factory),
+                onEditProfile = { id -> navController.navigate(EditProfileDest(id)) },
+                onOpenHealth = { id -> navController.navigate(HealthDest(id)) },
+                successMessage = null,
+                onMessageShown = {}
+            )
+        }
+
+        composable<CaregiverHomeDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<CaregiverHomeDest>()
+            CaregiverHomeScreen(
+                user = AppUser(id = dest.userId, name = dest.name, role = "caregiver"),
+                viewModel = viewModel(factory = factory)
+            )
+        }
+
+        composable<EditProfileDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<EditProfileDest>()
             EditProfileScreen(
-                user = currentRoute.session.user,
-
-                onBack = {
-                    route = AppRoute.Home(
-                        currentRoute.session
-                    )
-                },
-
-                onProfileUpdated = { updatedUser ->
-
-                    successMessage = "Perubahan profil berhasil disimpan"
-
-                    route = AppRoute.Home(
-                        currentRoute.session.copy(
-                            user = updatedUser
-                        )
-                    )
-                }
+                userId = dest.userId,
+                onBack = { navController.popBackStack() },
+                onProfileUpdated = { navController.popBackStack() }
             )
         }
-        is AppRoute.Health -> {
+
+        composable<HealthDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<HealthDest>()
             HealthScreen(
-                userId = currentRoute.session.user.id!!,
-
-                successMessage = successMessage,
-
-                onMessageShown = {
-                    successMessage = null
-                },
-
-                onBack = {
-                    route = AppRoute.Home(
-                        currentRoute.session
-                    )
-                },
-
-                onEditHealthProfile = {
-                    route = AppRoute.EditHealthProfile(
-                        currentRoute.session
-                    )
-                },
-
-                onOpenHistory = {
-                    route = AppRoute.HealthHistory(
-                        currentRoute.session
-                    )
-                }
+                userId = dest.userId,
+                viewModel = viewModel(factory = factory),
+                onBack = { navController.popBackStack() },
+                onEditHealthProfile = { id -> navController.navigate(EditHealthProfileDest(id)) },
+                onOpenHistory = { id -> navController.navigate(HealthHistoryDest(id)) },
+                successMessage = null,
+                onMessageShown = {}
             )
         }
-        is AppRoute.EditHealthProfile -> {
 
+        composable<EditHealthProfileDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<EditHealthProfileDest>()
             EditHealthProfileScreen(
-                userId = currentRoute.session.user.id!!,
-
-                onBack = {
-                    route = AppRoute.Health(
-                        currentRoute.session
-                    )
-                },
-
-                onProfileSaved = {
-
-                    successMessage =
-                        "Profil kesehatan berhasil diperbarui!"
-
-                    route = AppRoute.Health(
-                        currentRoute.session
-                    )
-                }
+                userId = dest.userId,
+                onBack = { navController.popBackStack() },
+                onProfileSaved = { navController.popBackStack() }
             )
         }
-        is AppRoute.HealthHistory -> {
 
+        composable<HealthHistoryDest> { backStackEntry ->
+            val dest = backStackEntry.toRoute<HealthHistoryDest>()
             HealthHistoryScreen(
-                userId = currentRoute.session.user.id!!,
-
-                onBack = {
-                    route = AppRoute.Health(
-                        currentRoute.session
-                    )
-                }
+                userId = dest.userId,
+                viewModel = viewModel(factory = factory),
+                onBack = { navController.popBackStack() }
             )
         }
     }

@@ -18,16 +18,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.projekakhir.rawatkasih.data.CaregiverOption
-import com.projekakhir.rawatkasih.data.RawatKasihRepository
 import com.projekakhir.rawatkasih.ui.theme.*
-import kotlinx.coroutines.launch
+import com.projekakhir.rawatkasih.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateBack: () -> Unit = {},
-    onRegisterSuccess: () -> Unit = onNavigateBack
+    onRegisterSuccess: () -> Unit = onNavigateBack,
+    viewModel: AuthViewModel = viewModel()
 ) {
     var nama by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -36,12 +37,13 @@ fun RegisterScreen(
     var konfirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var konfirmPasswordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
 
-    var caregiverList by remember { mutableStateOf<List<CaregiverOption>>(emptyList()) }
+    val caregiverList by viewModel.caregivers.collectAsState()
     var selectedCaregiver by remember { mutableStateOf<CaregiverOption?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    var isLoadingCaregivers by remember { mutableStateOf(true) }
+    
+    val isLoading by viewModel.isLoading.collectAsState()
+    val registerError by viewModel.error.collectAsState()
 
     var namaError by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf("") }
@@ -49,40 +51,14 @@ fun RegisterScreen(
     var passwordError by remember { mutableStateOf("") }
     var konfirmPasswordError by remember { mutableStateOf("") }
     var caregiverError by remember { mutableStateOf("") }
-    var registerError by remember { mutableStateOf("") }
-
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-
-        android.util.Log.d(
-            "RAWATKASIH",
-            "MULAI LOAD"
-        )
-
-        try {
-            caregiverList = RawatKasihRepository.loadCaregivers()
-
-            android.util.Log.d(
-                "RAWATKASIH",
-                "JUMLAH CAREGIVER = ${caregiverList.size}"
-            )
-
-        } catch (e: Exception) {
-            android.util.Log.e(
-                "RAWATKASIH",
-                "ERROR = ${e.message}",
-                e
-            )
-        } finally {
-            isLoadingCaregivers = false
-        }
+        viewModel.loadCaregivers()
     }
 
     fun validateAndRegister() {
         namaError = ""; emailError = ""; phoneError = ""
         passwordError = ""; konfirmPasswordError = ""; caregiverError = ""
-        registerError = ""
         var valid = true
 
         if (nama.isEmpty()) { namaError = "Nama tidak boleh kosong"; valid = false }
@@ -105,24 +81,14 @@ fun RegisterScreen(
         if (selectedCaregiver == null) { caregiverError = "Pilih caregiver terlebih dahulu"; valid = false }
 
         if (valid) {
-            isLoading = true
-            scope.launch {
-                try {
-                    RawatKasihRepository.registerPatient(
-                        name = nama.trim(),
-                        email = email.trim(),
-                        phone = phone.trim(),
-                        password = password,
-                        caregiverId = selectedCaregiver!!.id
-                    )
-                    onRegisterSuccess()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    registerError = e.message ?: "Unknown error"
-                } finally {
-                    isLoading = false
-                }
-            }
+            viewModel.registerPatient(
+                name = nama.trim(),
+                email = email.trim(),
+                phone = phone.trim(),
+                password = password,
+                caregiverId = selectedCaregiver!!.id,
+                onSuccess = onRegisterSuccess
+            )
         }
     }
 
@@ -133,8 +99,6 @@ fun RegisterScreen(
             .padding(horizontal = 28.dp)
             .padding(top = 56.dp, bottom = 32.dp)
     ) {
-
-        // ===== BACK BUTTON =====
         Surface(
             onClick = onNavigateBack,
             shape = CircleShape,
@@ -153,7 +117,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== HEADER =====
         Text("Buat Akun", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -163,7 +126,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ===== NAMA =====
         OutlinedTextField(
             value = nama,
             onValueChange = { nama = it; namaError = "" },
@@ -181,7 +143,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== EMAIL =====
         OutlinedTextField(
             value = email,
             onValueChange = { email = it; emailError = "" },
@@ -200,7 +161,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== PHONE =====
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it; phoneError = "" },
@@ -219,15 +179,13 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== DROPDOWN CAREGIVER =====
         ExposedDropdownMenuBox(
             expanded = dropdownExpanded,
             onExpandedChange = { dropdownExpanded = !dropdownExpanded },
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = if (isLoadingCaregivers) "Memuat caregiver..."
-                else selectedCaregiver?.name ?: "",
+                value = selectedCaregiver?.name ?: "",
                 onValueChange = {},
                 readOnly = true,
                 modifier = Modifier
@@ -248,10 +206,10 @@ fun RegisterScreen(
                 expanded = dropdownExpanded,
                 onDismissRequest = { dropdownExpanded = false }
             ) {
-                if (caregiverList.isEmpty() && !isLoadingCaregivers) {
+                if (caregiverList.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text("LIST KOSONG", color = TextGray) },
-                        onClick = { dropdownExpanded = false }
+                        text = { Text("Memuat caregiver...", color = TextGray) },
+                        onClick = { }
                     )
                 } else {
                     caregiverList.forEach { caregiver ->
@@ -270,7 +228,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== PASSWORD =====
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; passwordError = "" },
@@ -278,7 +235,7 @@ fun RegisterScreen(
             label = { Text("Password") },
             leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary) },
             trailingIcon = {
-                TextButton(onClick = { passwordVisible = !passwordVisible }) {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(if (passwordVisible) "Sembunyikan" else "Tampilkan", fontSize = 11.sp, color = Primary)
                 }
             },
@@ -295,7 +252,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ===== KONFIRMASI PASSWORD =====
         OutlinedTextField(
             value = konfirmPassword,
             onValueChange = { konfirmPassword = it; konfirmPasswordError = "" },
@@ -303,7 +259,7 @@ fun RegisterScreen(
             label = { Text("Konfirmasi Password") },
             leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary) },
             trailingIcon = {
-                TextButton(onClick = { konfirmPasswordVisible = !konfirmPasswordVisible }) {
+                IconButton(onClick = { konfirmPasswordVisible = !konfirmPasswordVisible }) {
                     Text(if (konfirmPasswordVisible) "Sembunyikan" else "Tampilkan", fontSize = 11.sp, color = Primary)
                 }
             },
@@ -320,17 +276,15 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // ===== ERROR REGISTER =====
-        if (registerError.isNotEmpty()) {
+        if (registerError != null) {
             Text(
-                text = registerError,
+                text = registerError!!,
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }
 
-        // ===== DAFTAR BUTTON =====
         Button(
             onClick = { validateAndRegister() },
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -338,15 +292,18 @@ fun RegisterScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Primary),
             enabled = !isLoading
         ) {
-            Text(
-                text = if (isLoading) "Mendaftarkan..." else "Daftar Sekarang",
-                fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White
-            )
+            if (isLoading) {
+                CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp))
+            } else {
+                Text(
+                    text = "Daftar Sekarang",
+                    fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== LOGIN LINK =====
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
