@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.projekakhir.rawatkasih.RawatKasihApplication
+import com.projekakhir.rawatkasih.RawatKasihHeader
 import com.projekakhir.rawatkasih.ui.theme.CardMint
 import com.projekakhir.rawatkasih.ui.theme.PrimaryMint
 import com.projekakhir.rawatkasih.ui.theme.Surface
@@ -32,6 +33,7 @@ import com.projekakhir.rawatkasih.viewmodel.ViewModelFactory
 fun EditHealthProfileScreen(
     userId: Long,
     onBack: () -> Unit,
+    onLogout: () -> Unit = {},
     onProfileSaved: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -74,7 +76,8 @@ fun EditHealthProfileScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = { RawatKasihHeader(onLogout = onLogout) }
     ) { paddingValues ->
         Column(
             modifier = Modifier

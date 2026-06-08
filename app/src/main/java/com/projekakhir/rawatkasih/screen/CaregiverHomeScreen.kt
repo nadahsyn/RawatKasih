@@ -38,12 +38,14 @@ import com.projekakhir.rawatkasih.data.RawatKasihRepository
 import com.projekakhir.rawatkasih.data.local.RawatKasihDatabase
 import com.projekakhir.rawatkasih.model.Patient
 import com.projekakhir.rawatkasih.viewmodel.CaregiverViewModel
+import com.projekakhir.rawatkasih.RawatKasihHeader
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaregiverHomeScreen(
     user: AppUser,
+    onLogout: () -> Unit = {},
     viewModel: CaregiverViewModel = viewModel()
 ) {
     val patients by viewModel.filteredPatients.collectAsState()
@@ -76,20 +78,7 @@ fun CaregiverHomeScreen(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = "RawatKasih",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 24.sp,
-                            color = Color(0xFF1E1E1E),
-                            letterSpacing = (-0.5).sp
-                        )
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Transparent
-                    )
-                )
+                RawatKasihHeader(onLogout = onLogout)
             }
         ) { paddingValues ->
             LazyColumn(

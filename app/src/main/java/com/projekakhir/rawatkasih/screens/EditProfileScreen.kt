@@ -34,11 +34,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import com.projekakhir.rawatkasih.RawatKasihHeader
 
 @Composable
 fun EditProfileScreen(
     userId: Long,
     onBack: () -> Unit,
+    onLogout: () -> Unit = {},
     onProfileUpdated: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -93,7 +95,9 @@ fun EditProfileScreen(
         println("USER IMAGE = ${user?.profileImage}")
     }
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        topBar = { RawatKasihHeader() }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -201,7 +205,7 @@ fun EditProfileScreen(
 
             Button(
                 onClick = {
-                    viewModel.updateProfile(userId, name, phone, age.toIntOrNull(), gender) {
+                    viewModel.updateProfile(userId, name, phone, age.toIntOrNull(), gender) { _ ->
                         onProfileUpdated()
                     }
                 },

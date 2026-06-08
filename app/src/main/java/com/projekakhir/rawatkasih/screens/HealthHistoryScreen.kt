@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import com.projekakhir.rawatkasih.RawatKasihHeader
 import com.projekakhir.rawatkasih.ui.theme.PrimaryMint
 import com.projekakhir.rawatkasih.ui.theme.TextSecondary
 import com.projekakhir.rawatkasih.viewmodel.HealthViewModel
@@ -45,7 +46,8 @@ fun HealthHistoryScreen(
     }
 
     Scaffold(
-        containerColor = Background
+        containerColor = Background,
+        topBar = { RawatKasihHeader() }
     ) { paddingValues ->
         Column(
             modifier = Modifier

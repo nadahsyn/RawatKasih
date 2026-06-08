@@ -34,12 +34,14 @@ import com.projekakhir.rawatkasih.data.MedicineSchedule
 import com.projekakhir.rawatkasih.ui.theme.*
 import com.projekakhir.rawatkasih.viewmodel.PatientViewModel
 import coil.compose.AsyncImage
+import com.projekakhir.rawatkasih.RawatKasihHeader
 
 @Composable
 fun PatientHomeScreen(
     userId: Long,
     onEditProfile: (Long) -> Unit,
     onOpenHealth: (Long) -> Unit,
+    onLogout: () -> Unit = {},
     successMessage: String?,
     onMessageShown: () -> Unit,
     viewModel: PatientViewModel = viewModel()
@@ -88,7 +90,8 @@ fun PatientHomeScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        topBar = { RawatKasihHeader(onLogout = onLogout) }
     ) { paddingValues ->
         if (user == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

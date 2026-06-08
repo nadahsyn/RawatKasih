@@ -86,6 +86,11 @@ private fun RawatKasihNavHost() {
                 viewModel = viewModel(factory = factory),
                 onEditProfile = { id -> navController.navigate(EditProfileDest(id)) },
                 onOpenHealth = { id -> navController.navigate(HealthDest(id)) },
+                onLogout = {
+                    navController.navigate(LoginDest) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 successMessage = null,
                 onMessageShown = {}
             )
@@ -95,7 +100,12 @@ private fun RawatKasihNavHost() {
             val dest = backStackEntry.toRoute<CaregiverHomeDest>()
             CaregiverHomeScreen(
                 user = AppUser(id = dest.userId, name = dest.name, role = "caregiver"),
-                viewModel = viewModel(factory = factory)
+                viewModel = viewModel(factory = factory),
+                onLogout = {
+                    navController.navigate(LoginDest) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -104,6 +114,11 @@ private fun RawatKasihNavHost() {
             EditProfileScreen(
                 userId = dest.userId,
                 onBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(LoginDest) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 onProfileUpdated = { navController.popBackStack() }
             )
         }
@@ -126,6 +141,11 @@ private fun RawatKasihNavHost() {
             EditHealthProfileScreen(
                 userId = dest.userId,
                 onBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(LoginDest) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 onProfileSaved = { navController.popBackStack() }
             )
         }

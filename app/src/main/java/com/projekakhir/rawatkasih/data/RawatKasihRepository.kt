@@ -314,7 +314,7 @@ class RawatKasihRepository(private val dao: RawatKasihDao) {
         )
 
         client.from("health_profiles")
-            .upsert(request)
+            .upsert(request, onConflict = "patient_id")
     }
 
     private suspend fun loadCurrentProfile(authId: String): AppUser {

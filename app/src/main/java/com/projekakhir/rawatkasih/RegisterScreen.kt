@@ -41,7 +41,7 @@ fun RegisterScreen(
     val caregiverList by viewModel.caregivers.collectAsState()
     var selectedCaregiver by remember { mutableStateOf<CaregiverOption?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    
+
     val isLoading by viewModel.isLoading.collectAsState()
     val registerError by viewModel.error.collectAsState()
 
@@ -179,6 +179,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Dropdown Pilih Caregiver
         ExposedDropdownMenuBox(
             expanded = dropdownExpanded,
             onExpandedChange = { dropdownExpanded = !dropdownExpanded },
@@ -228,6 +229,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Field Password
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; passwordError = "" },
@@ -236,7 +238,11 @@ fun RegisterScreen(
             leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary) },
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(if (passwordVisible) "Sembunyikan" else "Tampilkan", fontSize = 11.sp, color = Primary)
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = null,
+                        tint = Primary
+                    )
                 }
             },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -252,6 +258,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Field Konfirmasi Password
         OutlinedTextField(
             value = konfirmPassword,
             onValueChange = { konfirmPassword = it; konfirmPasswordError = "" },
@@ -260,7 +267,11 @@ fun RegisterScreen(
             leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary) },
             trailingIcon = {
                 IconButton(onClick = { konfirmPasswordVisible = !konfirmPasswordVisible }) {
-                    Text(if (konfirmPasswordVisible) "Sembunyikan" else "Tampilkan", fontSize = 11.sp, color = Primary)
+                    Icon(
+                        imageVector = if (konfirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = null,
+                        tint = Primary
+                    )
                 }
             },
             visualTransformation = if (konfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),

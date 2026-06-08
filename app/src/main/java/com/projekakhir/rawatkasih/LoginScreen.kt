@@ -1,5 +1,6 @@
 package com.projekakhir.rawatkasih
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -8,12 +9,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -24,8 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.projekakhir.rawatkasih.data.AuthResult
 import com.projekakhir.rawatkasih.ui.theme.*
 import com.projekakhir.rawatkasih.viewmodel.AuthViewModel
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 
 @Composable
 fun LoginScreen(
@@ -36,10 +37,10 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    
+
     var emailError by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf("") }
-    
+
     val isLoading by viewModel.isLoading.collectAsState()
     val loginError by viewModel.error.collectAsState()
 
@@ -77,23 +78,23 @@ fun LoginScreen(
             .padding(top = 56.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Logo dengan lingkaran
         Surface(
-            modifier = Modifier.size(90.dp),
+            modifier = Modifier.size(110.dp),
             shape = CircleShape,
             color = Secondary,
             tonalElevation = 0.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Logo",
-                    tint = Primary,
-                    modifier = Modifier.size(48.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.rawatkasih_logo),
+                    contentDescription = "Logo RawatKasih",
+                    modifier = Modifier.size(150.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = "RawatKasih",
@@ -158,17 +159,9 @@ fun LoginScreen(
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = Primary)
             },
             trailingIcon = {
-                IconButton(
-                    onClick = {
-                        passwordVisible = !passwordVisible
-                    }
-                ) {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
-                        imageVector =
-                            if (passwordVisible)
-                                Icons.Filled.Visibility
-                            else
-                                Icons.Filled.VisibilityOff,
+                        imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                         contentDescription = null,
                         tint = Primary
                     )
@@ -188,12 +181,6 @@ fun LoginScreen(
             ),
             singleLine = true
         )
-
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            TextButton(onClick = { }) {
-                Text("Lupa password?", color = Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
-        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
